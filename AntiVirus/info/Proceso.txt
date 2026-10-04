@@ -1,0 +1,117 @@
+Proceso
+	1. para empezar, el antivirus esta basado en hash
+
+		Como funciona?
+			tomo una base de datos de alguna organizacion donde esten recolectados 
+			el valor hash de los malwares que la orgnizacion conoce y se dedico a 
+			obtener su valor hash aplicandio alguna funcion
+
+			entonces si algun archivo en mi carpeta de USER coincide con algun valor hash, 
+			se sabra que entonces existe un malware, porque por las propiedades del hash se sabe
+			que no pueden existir valores duplicados.
+
+				LIMITANTE
+					Una propiedad del hash es que con el cambio minimo de un bit,
+					se genera un cambio del 60% aproximadamente en el valor hash 
+					resultante. Existen malware que vna cambiando su valor hash
+					con el tiempo con el objetivo preciso de que no coincidir con los 
+					resultados de la " BASE DE DATOS "
+
+			hay tener en cuenta: 
+
+			1. usar la misma funcion hash que usa la BASE DE DATOS para MIS archivos
+			
+			2. mi idea era partir de "/" pero hay demasiados archivos y se volveria 
+			muy lento, entonces analizare apartir de la carpeta de mi USER: /home/AlN
+
+				NOTA: para esta segunda version usare SHA-256 poruqe md5 no se recomienda
+				por sus colisiones xd
+
+	2. Descargar la BASE DE DATOS
+		se sabe que hay organizaciones que comparten sus bases de datos con el objetivo
+		de compratir d emanera gratis sus registros para impulsar la seguridad
+
+		yo decidi utilizar MalwareBazaar porque es una organizacion que impulsa el desarrollo
+
+		descargo la url la base de datos: 
+			https://bazaar.abuse.ch/export/txt/sha256/full/
+
+			esta version el resultado de hashear sus virus conocidos con SHA 256
+			el archivo se llama "full_sha256.txt" y tiene 1148428 entradas :0
+				lei que se recomienda quitar los comentarios del archivo
+
+	3. Hacer la transformacion de mis archivos a hash
+		usare las librerias 
+			dirent.h
+				para listar carpetas
+			sys/stat.h
+				para saber si es archivo o carpeta
+			openssl/sha.h 
+				para calcular sha256
+	4. codigos
+		NOTA: cambie de una lista a una busqueda binaria para que sea mas rapido
+
+		- transformacion.c
+			se abre el archivo en modo binario, pues lo que haremos para buscar es una busqueda
+			binaria, creando bloques de 8kb
+
+		- db.c
+			incializamos la db y la convertimos para leer, quitando los saltos de linea y
+			los comentarios que el archivo trae y se ordenan
+
+			hago una funcion donde hacemos la busqueda binaria y en caso de encontrar un 
+			resultado imprime un mensaje
+
+		- revisarCarpetas.c
+			hace una busqueda recursiva partiendo de la rututa que le asigne,
+			llama a la funcion es_malicioso que estara recibiendo el hash,
+			en vaso de encontrar coincidencia imprime la info del archivo
+			y te pregunta que deseas hacer, pues se necesita aislar ese archivo,
+			entonces lo movemos a nuestra carpeta de AISLADOS, debe de estar configurada sin ningun
+			peromiso
+
+		- aislar.c
+			para aislar le asignamos una carpta en mi sistema, sin permisos de nada
+			para cada archivo se van a renombrar y los arhivos movidos ahi seran 
+			asignados para que no tengan permisos
+
+		- main.c
+			ponemos la ruta de la db y de la carpeta raiz, en este caso es la de mi USER
+
+		- antivirus.h
+			pues es el header xd
+	
+		- AISLADOS
+			en esta carpeta con perisos 700
+			donde solo yo puedo mover, listar los archivos
+
+	5. PRUEBA
+		antes de ponerla en mi sistema, hare una prueba con un 
+		archivo de prueba estándar de la industria
+		
+		una carpeta de prueba "pueba_av"
+
+		y calcula el hash del archivo para ponerlo en la db
+		hago una db de prueba con el hash calculado con el archivo de prueba
+
+		EJECUTAMOS EL ANTI VIRUS
+
+			./antivirus ~/prueba_av
+
+			ejecutamos el prigrama pero le ponermos la carpeta de prueba
+			el programa debe de asilar el archivo de eejmplo, en la carpeta
+			AISLADOS, RENOMRADO
+
+			FLUJO
+			> cargó la base de datos 
+			> calculó el SHA256 del archivo 
+			> encontró coincidencia 
+			> preguntó 
+			> aisló
+
+			NOTAS
+				en el arhicvo "transformacio.c" tengo un print que dice
+				creando bloque xd, para que no me muestr tantos mensjes
+				lo voy a cambiar por un contador
+	este anitirus no tiene la capacidad de ller / porque se quedaria 
+
